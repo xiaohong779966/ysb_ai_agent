@@ -21,8 +21,11 @@
 - 与厂商无关的 Vector Store 协议和类型化异常
 - Chroma 持久化配置、延迟客户端初始化和 CRUD 适配器
 - Docker 中用于 Chroma 数据持久化的 `chroma-data` named volume
+- Excel 解析结果到 Embedding、Chroma upsert 的知识库索引编排服务
+- 原子校验、确定性记录 ID、来源 Metadata 和分类异常处理
+- 使用离线确定性向量的真实 Chroma 持久化集成测试
 
-第三阶段已完成 Embedding 抽象层、配置、Sentence Transformers 本地 Provider，以及 Chroma Vector Store 抽象契约和持久化适配器。Embedding Provider 仅在第一次获取向量维度或执行向量化时加载模型；Chroma 适配器也只在第一次执行非空存储操作时创建持久化客户端和 Collection。FastAPI 当前尚未组装这两个 Provider，因此应用启动不会下载模型或打开 Chroma。尚未实现 Excel 向量导入、相似度检索服务与接口、LangChain RAG 或大模型问答。
+第三阶段已完成 Embedding 抽象层、配置、Sentence Transformers 本地 Provider、Chroma Vector Store 持久化适配器，以及 Excel 知识库向量索引服务。索引服务接收解析后的有效 FAQ，按“问题 + 答案”构建文档，生成稳定 ID 和来源 Metadata，再批量写入 Vector Store。为防止不完整知识库上线，只要工作簿存在任何校验问题就整批拒绝，不执行部分索引。FastAPI 当前尚未组装这些服务，因此应用启动不会下载模型或打开 Chroma。尚未实现上传接口持久化、相似度检索服务与接口、LangChain RAG 或大模型问答。
 
 ## 项目结构
 
@@ -34,7 +37,7 @@ erp-ai-customer/
 │   │   ├── config/           # 配置与日志初始化
 │   │   ├── database/         # 后续业务数据库模块
 │   │   ├── middleware/       # 请求追踪中间件
-│   │   ├── rag/              # Embedding、向量检索与后续 RAG 模块
+│   │   ├── rag/              # Embedding、Vector Store、索引编排与后续 RAG 模块
 │   │   ├── schemas/          # API 响应模型
 │   │   └── main.py           # FastAPI 应用工厂
 │   ├── tests/                # 单元和接口测试
@@ -123,13 +126,13 @@ python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 
 `sentence-transformers` 已声明为生产依赖。Provider 支持文档与查询分别编码、批量大小配置、向量归一化，以及 `auto/cpu/cuda` 设备选择。模型采用延迟加载；只有后续模块创建 `EmbeddingService` 并首次使用 Provider 时，才会从本地缓存读取模型，缓存不存在时再尝试下载 `EMBEDDING_MODEL`。
 
-本模块的自动化测试全部使用替身模型，不联网、不下载 `BAAI/bge-small-zh-v1.5`。真实模型下载和推理集成测试将在向量导入模块开始前单独执行并记录结果。
+Embedding 单元测试和知识索引测试使用替身模型，不联网、不下载 `BAAI/bge-small-zh-v1.5`。当前模块只验证 Embedding 编排边界；真实模型下载与推理仍留到独立集成验收，不影响索引服务单元测试。
 
 ### Chroma Vector Store 说明
 
 `chromadb` 已声明为生产依赖。当前适配器接收上游生成的向量，支持批量 `upsert`、向量查询、按 ID 删除和计数，并显式禁用 Chroma 的内置 Embedding Function，确保 Embedding 与向量存储职责分离。持久化客户端和 Collection 都采用延迟初始化，Collection 使用配置的距离度量。
 
-本模块的自动化测试全部使用 Fake Client、Fake Collection 和替身目录准备器，不创建真实 Chroma 数据库。当前开发机的 `.venv` 尚未安装 `chromadb`，也未运行 Chroma Server；真实 Chroma 持久化、模型推理和 Excel 向量导入的端到端验证将在下一模块安装依赖后进行。
+当前开发机的 `.venv` 已安装 `chromadb 1.5.9`，并已安装其 Windows 原生扩展所需的 Microsoft Visual C++ x64 运行库。适配器单元测试仍使用 Fake Client 和 Fake Collection；知识索引集成测试使用离线确定性三维向量和真实 `PersistentClient`，验证索引写入、查询及重新创建客户端后的持久化读取，不启动独立 Chroma Server，也不下载真实 Embedding 模型。
 
 ## 测试与代码检查
 
@@ -149,6 +152,8 @@ python -m pytest backend\tests\test_excel_parser.py backend\tests\test_knowledge
 python -m pytest backend\tests\test_embedding_service.py backend\tests\test_embedding_settings.py -q
 python -m pytest backend\tests\test_sentence_transformers_provider.py -q
 python -m pytest backend\tests\test_vector_store_settings.py backend\tests\test_chroma_store.py -q
+python -m pytest backend\tests\test_knowledge_index_service.py -q
+python -m pytest backend\tests\test_knowledge_index_chroma_integration.py -q
 ```
 
 ## Docker 运行
@@ -188,7 +193,7 @@ Compose 当前仍只启动 FastAPI 后端，不启动独立 Chroma Server。后�
 ## 后续开发阶段
 
 1. Excel 知识库解析和数据校验（已完成）
-2. Embedding 与 Chroma 向量检索（进行中：已完成 Embedding Provider 和 Chroma 持久化适配器；下一步为 Excel 向量导入和检索服务）
+2. Embedding 与 Chroma 向量检索（进行中：已完成 Embedding Provider、Chroma 持久化适配器和 Excel 向量索引服务；下一步为相似度检索服务）
 3. LangChain RAG 和 AI 问答接口
 4. 聊天记录与 PostgreSQL
 5. Vue 或简单 Web 聊天窗口
