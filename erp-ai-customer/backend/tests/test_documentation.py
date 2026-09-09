@@ -49,3 +49,9 @@ def test_readme_contains_local_docker_and_api_instructions() -> None:
     for item in required_content:
         assert item in readme
 
+
+
+def test_sentence_transformers_runtime_dependency_is_declared() -> None:
+    requirements = (PROJECT_ROOT / "backend" / "requirements.txt").read_text("utf-8")
+
+    assert "sentence-transformers>=5.0,<7.0" in requirements.splitlines()

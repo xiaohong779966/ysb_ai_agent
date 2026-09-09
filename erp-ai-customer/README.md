@@ -17,8 +17,9 @@
 - 与厂商无关的 Embedding Provider 协议
 - Embedding 输入、向量维度和数值有效性校验
 - 本地 Embedding 模型的环境配置
+- Sentence Transformers 本地 Provider、延迟模型加载和 CPU/CUDA 自动选择
 
-第三阶段当前只完成 Embedding 抽象层与配置模块。应用启动时不会下载或加载模型，尚未实现 Sentence Transformers 适配器、Chroma 持久化、向量导入、相似度检索、LangChain RAG 或大模型问答。
+第三阶段已完成 Embedding 抽象层、配置和 Sentence Transformers 本地 Provider。Provider 仅在第一次获取向量维度或执行向量化时加载模型；FastAPI 当前尚未组装该 Provider，因此应用启动不会下载模型。尚未实现 Chroma 持久化、Excel 向量导入、相似度检索、LangChain RAG 或大模型问答。
 
 ## 项目结构
 
@@ -104,11 +105,17 @@ python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 | `KNOWLEDGE_UPLOAD_MAX_MB` | `10` | Excel 上传大小限制，允许 1–100 MB |
 | `EMBEDDING_PROVIDER` | `sentence_transformers` | Embedding 实现标识；当前只允许本地 Sentence Transformers |
 | `EMBEDDING_MODEL` | `BAAI/bge-small-zh-v1.5` | 后续本地适配器使用的中文 Embedding 模型 |
-| `EMBEDDING_DEVICE` | `auto` | `auto/cpu/cuda`，由后续本地适配器解析 |
+| `EMBEDDING_DEVICE` | `auto` | `auto/cpu/cuda`；`auto` 优先使用可用 CUDA，否则使用 CPU |
 | `EMBEDDING_BATCH_SIZE` | `32` | 批量向量化大小，允许 1–512 |
-| `EMBEDDING_NORMALIZE` | `true` | 是否要求后续适配器输出归一化向量 |
+| `EMBEDDING_NORMALIZE` | `true` | 是否输出单位长度归一化向量 |
 
 配置值不符合约束时，应用在启动阶段直接返回明确的 Pydantic 校验错误。
+
+### 本地 Embedding 模型说明
+
+`sentence-transformers` 已声明为生产依赖。Provider 支持文档与查询分别编码、批量大小配置、向量归一化，以及 `auto/cpu/cuda` 设备选择。模型采用延迟加载；只有后续模块创建 `EmbeddingService` 并首次使用 Provider 时，才会从本地缓存读取模型，缓存不存在时再尝试下载 `EMBEDDING_MODEL`。
+
+本模块的自动化测试全部使用替身模型，不联网、不下载 `BAAI/bge-small-zh-v1.5`。真实模型下载和推理集成测试将在向量导入模块开始前单独执行并记录结果。
 
 ## 测试与代码检查
 
@@ -126,6 +133,7 @@ python -m pytest backend\tests\test_api.py -q
 python -m pytest backend\tests\test_docker_files.py -q
 python -m pytest backend\tests\test_excel_parser.py backend\tests\test_knowledge_upload.py -q
 python -m pytest backend\tests\test_embedding_service.py backend\tests\test_embedding_settings.py -q
+python -m pytest backend\tests\test_sentence_transformers_provider.py -q
 ```
 
 ## Docker 运行
@@ -165,10 +173,9 @@ Compose 当前只启动 FastAPI 后端。Chroma 将在第三阶段后续模块�
 ## 后续开发阶段
 
 1. Excel 知识库解析和数据校验（已完成）
-2. Embedding 与 Chroma 向量检索（进行中：已完成抽象层与配置）
+2. Embedding 与 Chroma 向量检索（进行中：已完成抽象层、配置和 Sentence Transformers Provider）
 3. LangChain RAG 和 AI 问答接口
 4. 聊天记录与 PostgreSQL
 5. Vue 或简单 Web 聊天窗口
 6. Linux Docker 部署验证
 7. 权限、工单和人工客服等企业功能
-

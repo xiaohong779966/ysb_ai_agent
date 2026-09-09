@@ -5,6 +5,9 @@ from backend.app.rag.embeddings.base import (
     EmbeddingProvider,
     EmbeddingVector,
 )
+from backend.app.rag.embeddings.sentence_transformers_provider import (
+    SentenceTransformersProvider,
+)
 from backend.app.rag.embeddings.service import EmbeddingService
 
 __all__ = [
@@ -12,4 +15,5 @@ __all__ = [
     "EmbeddingProvider",
     "EmbeddingService",
     "EmbeddingVector",
+    "SentenceTransformersProvider",
 ]
