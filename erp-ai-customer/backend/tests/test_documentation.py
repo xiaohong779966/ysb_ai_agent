@@ -19,6 +19,11 @@ REQUIRED_ENVIRONMENT_VARIABLES = {
     "EMBEDDING_DEVICE",
     "EMBEDDING_BATCH_SIZE",
     "EMBEDDING_NORMALIZE",
+    "VECTOR_STORE_PROVIDER",
+    "CHROMA_PERSIST_DIRECTORY",
+    "CHROMA_COLLECTION_NAME",
+    "CHROMA_DISTANCE_METRIC",
+    "CHROMA_QUERY_LIMIT",
 }
 
 
@@ -55,3 +60,9 @@ def test_sentence_transformers_runtime_dependency_is_declared() -> None:
     requirements = (PROJECT_ROOT / "backend" / "requirements.txt").read_text("utf-8")
 
     assert "sentence-transformers>=5.0,<7.0" in requirements.splitlines()
+
+
+def test_chroma_runtime_dependency_is_declared() -> None:
+    requirements = (PROJECT_ROOT / "backend" / "requirements.txt").read_text("utf-8")
+
+    assert "chromadb>=1.0,<2.0" in requirements.splitlines()

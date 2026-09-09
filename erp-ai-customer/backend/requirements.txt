@@ -6,3 +6,4 @@ pydantic-settings>=2.6,<3.0
 openpyxl>=3.1,<4.0
 python-multipart>=0.0.18,<1.0
 sentence-transformers>=5.0,<7.0
+chromadb>=1.0,<2.0

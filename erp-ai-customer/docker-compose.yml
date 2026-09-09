@@ -12,6 +12,8 @@ services:
       LOG_FORMAT: json
     ports:
       - "${PORT:-8000}:8000"
+    volumes:
+      - chroma-data:/app/data/chroma
     healthcheck:
       test:
         - CMD
@@ -25,3 +27,6 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+
+volumes:
+  chroma-data:

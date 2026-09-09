@@ -19,6 +19,8 @@ def test_compose_defines_only_backend_service() -> None:
     assert backend["env_file"] == [".env"]
     assert "${PORT:-8000}:8000" in backend["ports"]
     assert backend["environment"]["LOG_FORMAT"] == "json"
+    assert backend["volumes"] == ["chroma-data:/app/data/chroma"]
+    assert "chroma-data" in compose["volumes"]
 
 
 def test_compose_healthcheck_targets_versioned_endpoint() -> None:
@@ -40,3 +42,5 @@ def test_dockerfile_uses_non_root_python_service() -> None:
     assert "backend.app.main:app" in dockerfile
     assert 'EXPOSE 8000' in dockerfile
     assert "requirements.txt" in dockerfile
+    assert "mkdir -p /app/data/chroma" in dockerfile
+    assert "chown -R app:app /app/data" in dockerfile
