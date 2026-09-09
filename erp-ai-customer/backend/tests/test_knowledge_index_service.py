@@ -20,7 +20,6 @@ from backend.app.rag.indexing.exceptions import (
     KnowledgeIndexInputError,
     KnowledgeIndexResultError,
     KnowledgeIndexStorageError,
-    KnowledgeIndexValidationError,
 )
 from backend.app.rag.indexing.service import KnowledgeIndexService
 from backend.app.rag.vector_store.base import VectorRecord, VectorSearchResult, VectorStore
@@ -227,26 +226,33 @@ def test_different_sources_create_different_record_ids() -> None:
     assert first.record_ids != second.record_ids
 
 
-def test_supplied_sample_is_rejected_as_one_atomic_import() -> None:
+def test_supplied_sample_is_indexed_as_one_atomic_import() -> None:
     service, provider, vector_store = build_service()
     parse_result = parse_knowledge_workbook(SAMPLE_WORKBOOK)
 
-    with pytest.raises(KnowledgeIndexValidationError, match="1 validation issue") as error:
-        service.index_parse_result(parse_result, source_name=SAMPLE_WORKBOOK.name)
+    result = service.index_parse_result(
+        parse_result,
+        source_name=SAMPLE_WORKBOOK.name,
+    )
 
-    assert "row 29" in str(error.value)
-    assert provider.document_calls == []
-    assert vector_store.upsert_calls == []
+    assert result.total_rows == 28
+    assert result.indexed_records == 28
+    assert len(result.record_ids) == 28
+    assert len(provider.document_calls) == 1
+    assert len(provider.document_calls[0]) == 28
+    assert len(vector_store.upsert_calls) == 1
+    assert len(vector_store.upsert_calls[0]) == 28
 
 
-def test_index_workbook_parses_the_supplied_sample_before_rejecting_issues() -> None:
+def test_index_workbook_parses_and_indexes_the_supplied_sample() -> None:
     service, provider, vector_store = build_service()
 
-    with pytest.raises(KnowledgeIndexValidationError, match="row 29"):
-        service.index_workbook(SAMPLE_WORKBOOK)
+    result = service.index_workbook(SAMPLE_WORKBOOK)
 
-    assert provider.document_calls == []
-    assert vector_store.upsert_calls == []
+    assert result.total_rows == 28
+    assert result.indexed_records == 28
+    assert len(provider.document_calls) == 1
+    assert len(vector_store.upsert_calls) == 1
 
 
 @pytest.mark.parametrize(

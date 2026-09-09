@@ -39,7 +39,7 @@ def build_client(*, max_upload_mb: int = 10) -> TestClient:
     return TestClient(create_app(settings))
 
 
-def test_upload_supplied_sample_returns_preview_and_row_issue() -> None:
+def test_upload_supplied_sample_returns_valid_preview() -> None:
     with SAMPLE_WORKBOOK.open("rb") as sample_file, build_client() as client:
         response = client.post(
             UPLOAD_URL,
@@ -56,21 +56,14 @@ def test_upload_supplied_sample_returns_preview_and_row_issue() -> None:
     payload = response.json()
     assert payload["file_name"] == "erp_faq.xlsx"
     assert payload["sheet_name"] == "Sheet1"
-    assert payload["total_rows"] == 29
+    assert payload["total_rows"] == 28
     assert payload["valid_rows"] == 28
-    assert payload["invalid_rows"] == 1
-    assert payload["is_valid"] is False
+    assert payload["invalid_rows"] == 0
+    assert payload["is_valid"] is True
     assert payload["preview_count"] == 20
     assert payload["preview_truncated"] is True
     assert payload["records"][0]["question"] == "收银台/后台下载"
-    assert payload["issues"] == [
-        {
-            "row_number": 29,
-            "field": "answer",
-            "code": "required",
-            "message": "答案不能为空",
-        }
-    ]
+    assert payload["issues"] == []
 
 
 def test_upload_valid_workbook_returns_importable_preview() -> None:

@@ -39,17 +39,15 @@ def test_parse_supplied_erp_faq_sample(helpers) -> None:
     result = parse_knowledge_workbook(SAMPLE_WORKBOOK)
 
     assert result.sheet_name == "Sheet1"
-    assert result.total_rows == 29
+    assert result.total_rows == 28
     assert result.valid_rows == 28
-    assert result.invalid_rows == 1
-    assert result.is_valid is False
+    assert result.invalid_rows == 0
+    assert result.is_valid is True
     assert result.records[0].row_number == 2
     assert result.records[0].question == "收银台/后台下载"
-    assert result.records[-1].row_number == 30
+    assert result.records[-1].row_number == 29
     assert result.records[-1].question == "采购订单，出现采购价＞入库价的现象"
-    assert result.issues == (
-        helpers.issue(29, "answer", "required", "答案不能为空"),
-    )
+    assert result.issues == ()
 
 
 def test_parser_normalizes_whitespace_and_line_endings() -> None:
