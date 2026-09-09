@@ -16,6 +16,8 @@ def test_settings_defaults() -> None:
     assert settings.port == 8000
     assert settings.log_level == "INFO"
     assert settings.log_format == "text"
+    assert settings.knowledge_upload_max_mb == 10
+    assert settings.knowledge_upload_max_bytes == 10 * 1024 * 1024
 
 
 def test_environment_variables_override_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -25,6 +27,7 @@ def test_environment_variables_override_defaults(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("PORT", "9000")
     monkeypatch.setenv("LOG_LEVEL", "debug")
     monkeypatch.setenv("LOG_FORMAT", "JSON")
+    monkeypatch.setenv("KNOWLEDGE_UPLOAD_MAX_MB", "25")
 
     settings = Settings(_env_file=None)
 
@@ -34,6 +37,7 @@ def test_environment_variables_override_defaults(monkeypatch: pytest.MonkeyPatch
     assert settings.port == 9000
     assert settings.log_level == "DEBUG"
     assert settings.log_format == "json"
+    assert settings.knowledge_upload_max_mb == 25
 
 
 @pytest.mark.parametrize(
@@ -43,6 +47,8 @@ def test_environment_variables_override_defaults(monkeypatch: pytest.MonkeyPatch
         ("LOG_LEVEL", "verbose"),
         ("LOG_FORMAT", "xml"),
         ("API_V1_PREFIX", "/"),
+        ("KNOWLEDGE_UPLOAD_MAX_MB", "0"),
+        ("KNOWLEDGE_UPLOAD_MAX_MB", "101"),
     ],
 )
 def test_invalid_settings_fail_fast(

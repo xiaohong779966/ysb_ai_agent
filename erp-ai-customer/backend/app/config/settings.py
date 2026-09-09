@@ -33,6 +33,19 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"
+    knowledge_upload_max_mb: int = 10
+
+    @property
+    def knowledge_upload_max_bytes(self) -> int:
+        """Return the upload limit in bytes."""
+        return self.knowledge_upload_max_mb * 1024 * 1024
+
+    @field_validator("knowledge_upload_max_mb")
+    @classmethod
+    def validate_upload_limit(cls, value: int) -> int:
+        if not 1 <= value <= 100:
+            raise ValueError("KNOWLEDGE_UPLOAD_MAX_MB must be between 1 and 100")
+        return value
 
     @field_validator("api_v1_prefix")
     @classmethod

@@ -2,6 +2,8 @@
 
 import pytest
 
+from backend.app.knowledge.models import KnowledgeValidationIssue
+
 SETTINGS_ENVIRONMENT_VARIABLES = (
     "APP_NAME",
     "APP_VERSION",
@@ -12,6 +14,7 @@ SETTINGS_ENVIRONMENT_VARIABLES = (
     "PORT",
     "LOG_LEVEL",
     "LOG_FORMAT",
+    "KNOWLEDGE_UPLOAD_MAX_MB",
 )
 
 
@@ -20,3 +23,26 @@ def isolate_application_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Prevent host environment variables from leaking into test settings."""
     for variable in SETTINGS_ENVIRONMENT_VARIABLES:
         monkeypatch.delenv(variable, raising=False)
+
+
+class Helpers:
+    """Small factories that keep expected domain objects readable in tests."""
+
+    @staticmethod
+    def issue(
+        row_number: int,
+        field: str,
+        code: str,
+        message: str,
+    ) -> KnowledgeValidationIssue:
+        return KnowledgeValidationIssue(
+            row_number=row_number,
+            field=field,
+            code=code,
+            message=message,
+        )
+
+
+@pytest.fixture
+def helpers() -> Helpers:
+    return Helpers()
