@@ -12,6 +12,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 AppEnvironment = Literal["local", "development", "testing", "staging", "production"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 LogFormat = Literal["text", "json"]
+EmbeddingProviderName = Literal["sentence_transformers"]
+EmbeddingDevice = Literal["auto", "cpu", "cuda"]
 
 
 class Settings(BaseSettings):
@@ -34,6 +36,11 @@ class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"
     knowledge_upload_max_mb: int = 10
+    embedding_provider: EmbeddingProviderName = "sentence_transformers"
+    embedding_model: str = "BAAI/bge-small-zh-v1.5"
+    embedding_device: EmbeddingDevice = "auto"
+    embedding_batch_size: int = 32
+    embedding_normalize: bool = True
 
     @property
     def knowledge_upload_max_bytes(self) -> int:
@@ -45,6 +52,26 @@ class Settings(BaseSettings):
     def validate_upload_limit(cls, value: int) -> int:
         if not 1 <= value <= 100:
             raise ValueError("KNOWLEDGE_UPLOAD_MAX_MB must be between 1 and 100")
+        return value
+
+    @field_validator("embedding_provider", "embedding_device", mode="before")
+    @classmethod
+    def normalize_embedding_options(cls, value: object) -> object:
+        return value.lower() if isinstance(value, str) else value
+
+    @field_validator("embedding_model")
+    @classmethod
+    def validate_embedding_model(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("EMBEDDING_MODEL must not be blank")
+        return normalized
+
+    @field_validator("embedding_batch_size")
+    @classmethod
+    def validate_embedding_batch_size(cls, value: int) -> int:
+        if not 1 <= value <= 512:
+            raise ValueError("EMBEDDING_BATCH_SIZE must be between 1 and 512")
         return value
 
     @field_validator("api_v1_prefix")
